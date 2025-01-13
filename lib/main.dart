@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:syncfusion_flutter_datagrid/datagrid.dart';
 import 'package:url_strategy/url_strategy.dart';
-import 'package:syncfusion_flutter_core/theme.dart';
 
 void main() {
   setPathUrlStrategy();
@@ -105,106 +103,24 @@ class PageOne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: Container(
-                height: 645,
-                color:Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                child: SfDataGridTheme(
-                    data: SfDataGridThemeData(
-                      headerColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                      sortIconColor: Colors.white,
-                    ),
-                    child: SfDataGrid(
-                        gridLinesVisibility: GridLinesVisibility.none,
-                        columnWidthMode:ColumnWidthMode.fill,
-                        showCheckboxColumn: true,
-                        selectionMode: SelectionMode.multiple,
-                        allowSorting: true,
-                        allowTriStateSorting: true,
-                        sortingGestureType: SortingGestureType.doubleTap,
-                        source: CommandeController.commandeDataSource,
-                        columns: CommandeController.colonneCommandes.map<GridColumn>((e){
-                          return GridColumn(
-                              allowSorting: e==CommandeController.colonneCommandes[0]||e==CommandeController.colonneCommandes[3]?true:false,
-                              columnName: e, label: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                              alignment: Alignment.center,child: Texte(e,couleur: Colors.white)
-                          )
-                          );
-                        }).toList()
-                    )
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-        ),
+      body: ListView.builder(
+        itemCount: CommandeController.commandes.length,
+          itemBuilder: (ctx,index){
+          final valeur = CommandeController.commandes[index];
+          return ListTile(
+            leading: Texte(valeur.numeroCommandes.toString()),
+            title: Texte("Statut :${valeur.status!}"),
+            subtitle: Texte("${valeur.prix.toString()} fr"),
+            trailing: Texte(valeur.heure!),
+            onTap: (){
+              context.go("/page-two",extra: valeur);
+            },
+          );
+          }
       ),
     );
   }
 }
-
-/// table widget
-class BoxTableCommande extends StatelessWidget {
-  final DataGridCell<dynamic> e;
-  const BoxTableCommande({super.key,required this.e});
-
-  @override
-  Widget build(BuildContext context) {
-
-    return Container(
-      alignment: Alignment.center,
-      padding: const EdgeInsets.all(8.0),
-      child:e.columnName=="Date et heure"?
-      Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: Texte(e.value[0], taille: 12,textOverflow: TextOverflow.ellipsis,couleur: Colors.white,)),
-                Expanded(child: Texte(e.value[1], taille: 12,textOverflow: TextOverflow.ellipsis,couleur: Colors.white,)),
-              ],
-            ),
-          )
-        ],
-      ):
-      e.columnName == "information clients" ?
-      Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: Texte(e.value[0], taille: 12,textOverflow: TextOverflow.ellipsis,couleur: Colors.white,)),
-                Expanded(child: Texte(e.value[1], taille: 12,textOverflow: TextOverflow.ellipsis,couleur: Colors.white,)),
-              ],
-            ),
-          )
-        ],
-      ) : e.columnName == "Status" ?
-      Container(
-          padding:const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-              color:Colors.yellow,
-              borderRadius:BorderRadius.circular(5)
-          ),
-          child: Texte(e.value.toString(), taille: 12,couleur: Colors.black)
-      ): e.columnName=="Actions"?IconButton(
-          onPressed: (){
-            context.go("/page-two",extra: e.value);
-          },
-          icon: const Icon(Icons.remove_red_eye, size: 20)
-      ):
-      Texte(e.value.toString(), taille: 12,couleur: Colors.white),
-    );
-  }
-}
-
 
 ///page of details
 class PageTwo extends StatelessWidget {
@@ -234,105 +150,7 @@ class CommandeController{
   ];
   static List<String> colonneCommandes = ["Numéros commandes","Date et heure","information clients","Montant total","Status","Actions"];
   static int rowsPerPage = 5;
-  static TableDataSource<CommandeModele>commandeDataSource = TableDataSource(laListe: commandes,rowsPerPage: rowsPerPage, colonne: colonneCommandes);
   CommandeController();
-}
-
-/// table construction model
-class TableDataSource<T extends DataTableModele> extends DataGridSource {
-
-  final int rowsPerPage;
-  final List<String>colonne;
-  List<DataGridRow>produitsDataGridRows = [];
-  List<T>paginatedRows = [];
-  List<T>categoriesData = [];
-
-  TableDataSource({required List<
-      T>laListe, required this.rowsPerPage, required this.colonne}) {
-    paginatedRows = laListe;
-    categoriesData = laListe;
-    buildPaginatedDataGridRows();
-  }
-
-  @override
-  List<DataGridRow> get rows => produitsDataGridRows;
-
-  //remplir les cellules d'une ligne et colonne avec un mappage
-  @override
-  DataGridRowAdapter? buildRow(DataGridRow row) {
-    return DataGridRowAdapter(
-        color: row.getCells()[0].value % 2 == 0
-            ? Colors.deepPurpleAccent
-            : Colors.deepPurpleAccent.shade100,
-        cells: row.getCells().map((e) {
-          return builWidgetLigne(e, paginatedRows);
-        }).toList()
-    );
-  }
-
-  //methode de mappage pour remplir les cellules ligne et colonne
-  buildPaginatedDataGridRows() {
-    produitsDataGridRows = paginatedRows.map<DataGridRow>((e) {
-      return DataGridRow(
-          cells: [
-            for(var i = 0; i < colonne.length; i++)...{
-              DataGridCell(columnName: colonne[i], value: buildLigne(e)[i]),
-            }
-          ]
-      );
-    }).toList();
-  }
-
-  //crée la pagination
-  @override
-  Future<bool> handlePageChange(int oldPageIndex, int newPageIndex) async {
-    final int startIndex = newPageIndex * rowsPerPage;
-    int endIndex = startIndex + rowsPerPage;
-    if (endIndex > categoriesData.length) {
-      endIndex = categoriesData.length;
-    }
-    if (startIndex < categoriesData.length &&
-        endIndex <= categoriesData.length) {
-      paginatedRows = categoriesData.getRange(startIndex, endIndex).toList();
-    } else {
-      paginatedRows = <T>[];
-    }
-    buildPaginatedDataGridRows();
-    notifyListeners();
-    return true;
-  }
-
-  //mettre a jour le tableau de pagination
-  void updateDataGriDataSource() {
-    notifyListeners();
-  }
-
-  //construire la cellule
-  Map<int, dynamic> buildLigne(T valeur) {
-    if (valeur.runtimeType == CommandeModele) {
-      return {
-        0: valeur.numeroCommandes,
-        1: [valeur.date, valeur.heure],
-        2: [valeur.nom, valeur.prenom],
-        3: valeur.prix,
-        4: valeur.status,
-        5: valeur
-      };
-    } else {
-      return {};
-    }
-  }
-
-  //construire le widget de la ligne
-  Widget builWidgetLigne(DataGridCell<dynamic> e, List<T> paginatedRows) {
-    //print(T.runtimeType);
-    if (paginatedRows.runtimeType == List<CommandeModele>) {
-      return BoxTableCommande(e: e);
-    }
-    else {
-      return Container(color: Colors.green);
-    }
-  }
 }
 
 /// widget text
@@ -381,4 +199,8 @@ class CommandeModele extends DataTableModele{
   CommandeModele.nulls();
   CommandeModele({super.numeroCommandes,super.date,super.heure,super.status,super.prix,super.nom,super.prenom});
 }
+
+/*
+ context.go("/page-two",extra: e.value);
+ */
 
